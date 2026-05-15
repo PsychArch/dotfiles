@@ -1,0 +1,216 @@
+#!/usr/bin/env bash
+# Install user workflow packages before dotfiles are applied.
+#
+# Hash triggers:
+# - Arch packages: {{ .packages.arch | toJson | sha256sum }}
+# - Ubuntu packages: {{ .packages.ubuntu | toJson | sha256sum }}
+# - Darwin packages: {{ .packages.darwin | toJson | sha256sum }}
+
+set -euo pipefail
+
+# =============================================================================
+# CONFIGURATION
+# =============================================================================
+
+# Get script directory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CHEZMOI_SOURCE_DIR="${CHEZMOI_SOURCE_DIR:-${SCRIPT_DIR}}"
+
+# Package arrays for each OS
+{{- if ne .chezmoi.os "darwin" }}
+{{- if eq .chezmoi.osRelease.id "arch" }}
+ARCH_OFFICIAL=(
+{{- range .packages.arch.official }}
+    {{ . | quote }}
+{{- end }}
+)
+ARCH_OPTIONAL=(
+{{- range .packages.arch.optional }}
+    {{ . | quote }}
+{{- end }}
+)
+export ARCH_OFFICIAL ARCH_OPTIONAL
+{{- end }}
+
+{{- if or (eq .chezmoi.osRelease.id "ubuntu") (eq .chezmoi.osRelease.id "debian") }}
+UBUNTU_APT=(
+{{- range .packages.ubuntu.apt }}
+    {{ . | quote }}
+{{- end }}
+)
+UBUNTU_CARGO=(
+{{- range .packages.ubuntu.cargo }}
+    {{ . | quote }}
+{{- end }}
+)
+UBUNTU_MANUAL_NAMES=(
+{{- range .packages.ubuntu.manual }}
+    {{ .name | quote }}
+{{- end }}
+)
+UBUNTU_MANUAL_METHODS=(
+{{- range .packages.ubuntu.manual }}
+    {{ .method | quote }}
+{{- end }}
+)
+UBUNTU_MANUAL_COMMANDS=(
+{{- range .packages.ubuntu.manual }}
+    {{ .command | quote }}
+{{- end }}
+)
+export UBUNTU_APT UBUNTU_CARGO UBUNTU_MANUAL_NAMES UBUNTU_MANUAL_METHODS UBUNTU_MANUAL_COMMANDS
+{{- end }}
+{{- end }}
+
+{{- if eq .chezmoi.os "darwin" }}
+DARWIN_BREWS=(
+{{- range .packages.darwin.brews }}
+    {{ . | quote }}
+{{- end }}
+)
+DARWIN_OPTIONAL=(
+{{- range .packages.darwin.optional }}
+    {{ . | quote }}
+{{- end }}
+)
+export DARWIN_BREWS DARWIN_OPTIONAL
+{{- end }}
+
+# =============================================================================
+# LOGGING
+# =============================================================================
+
+# Source unified logger library
+LOGGER_LIB="${CHEZMOI_SOURCE_DIR}/shared/logger.sh"
+if [ ! -f "${LOGGER_LIB}" ]; then
+    echo "logger library not found at ${LOGGER_LIB}" >&2
+    exit 1
+fi
+# shellcheck source=/dev/null
+source "${LOGGER_LIB}"
+
+{{- if not (get . "installPackages" | default false) }}
+log_skip "Package installation disabled. Enable data.installPackages in chezmoi config to opt in."
+{{- else }}
+
+# =============================================================================
+# MAIN
+# =============================================================================
+
+log_info "Package installation starting"
+
+# Detect if we have sudo privileges
+HAS_SUDO=false
+
+# On macOS, Homebrew doesn't require sudo
+if [ "$(uname)" = "Darwin" ]; then
+    HAS_SUDO=true
+    log_info "Running on macOS (Homebrew doesn't require sudo)"
+# Check if running as root first (works even without sudo command)
+elif [ "$EUID" -eq 0 ] || [ "$(id -u)" -eq 0 ]; then
+    HAS_SUDO=true
+    log_info "Running as root"
+elif command -v sudo >/dev/null 2>&1; then
+    if sudo -n true 2>/dev/null; then
+        HAS_SUDO=true
+        log_info "Detected sudo privileges (passwordless)"
+    else
+        # Try sudo with timeout (will prompt for password if needed)
+        if sudo -v 2>/dev/null; then
+            HAS_SUDO=true
+            log_info "Sudo privileges available (password required)"
+        else
+            log_warn "Sudo not available or password incorrect"
+        fi
+    fi
+else
+    log_warn "Sudo command not found and not running as root"
+fi
+
+# Detect OS
+OS_TYPE=""
+if [ -f /etc/os-release ]; then
+    # shellcheck source=/dev/null
+    . /etc/os-release
+    OS_ID="$ID"
+
+    case "$OS_ID" in
+        arch|manjaro)
+            OS_TYPE="arch"
+            ;;
+        ubuntu|debian|linuxmint|pop)
+            OS_TYPE="ubuntu"
+            ;;
+        *)
+            log_warn "Unknown Linux distribution: $OS_ID"
+            ;;
+    esac
+elif [ "$(uname)" = "Darwin" ]; then
+    OS_TYPE="darwin"
+    OS_ID="darwin"
+else
+    log_warn "Unknown operating system: $(uname)"
+fi
+
+log_info "Detected OS: $OS_TYPE"
+log_info "Has sudo: $HAS_SUDO"
+
+# =============================================================================
+# INSTALL PACKAGES
+# =============================================================================
+
+if [ "$HAS_SUDO" = true ] && [ -n "$OS_TYPE" ]; then
+    log_info "Using system package manager for $OS_TYPE"
+
+    case "$OS_TYPE" in
+        arch)
+{{- if ne .chezmoi.os "darwin" }}
+{{- if eq .chezmoi.osRelease.id "arch" }}
+            # Source and run Arch Linux installation
+            source "${CHEZMOI_SOURCE_DIR}/scripts/lib/install-packages-arch.sh"
+            install_packages_arch
+{{- else }}
+            log_warn "Arch Linux installation skipped (not running on Arch)"
+{{- end }}
+{{- else }}
+            log_warn "Arch Linux installation skipped (running on macOS)"
+{{- end }}
+            ;;
+        ubuntu)
+{{- if ne .chezmoi.os "darwin" }}
+{{- if or (eq .chezmoi.osRelease.id "ubuntu") (eq .chezmoi.osRelease.id "debian") }}
+            # Source and run Ubuntu/Debian installation
+            source "${CHEZMOI_SOURCE_DIR}/scripts/lib/install-packages-ubuntu.sh"
+            if ! install_packages_ubuntu; then
+                log_warn "Ubuntu/Debian package installation did not complete"
+            fi
+{{- else }}
+            log_warn "Ubuntu/Debian installation skipped (not running on Ubuntu/Debian)"
+{{- end }}
+{{- else }}
+            log_warn "Ubuntu/Debian installation skipped (running on macOS)"
+{{- end }}
+            ;;
+        darwin)
+{{- if eq .chezmoi.os "darwin" }}
+            # Source and run macOS installation
+            source "${CHEZMOI_SOURCE_DIR}/scripts/lib/install-packages-darwin.sh"
+            if ! install_packages_darwin; then
+                log_warn "Homebrew installation failed"
+            fi
+{{- else }}
+            log_warn "macOS installation skipped (not running on macOS)"
+{{- end }}
+            ;;
+        *)
+            log_warn "Unknown OS type: $OS_TYPE; package installation skipped"
+            ;;
+    esac
+elif [ "$HAS_SUDO" = false ]; then
+    log_warn "Package installation requires sudo/root access or Homebrew on macOS; skipping"
+elif [ -z "$OS_TYPE" ]; then
+    log_warn "Package installation skipped because the operating system was not recognized"
+fi
+
+log_done "Package installation complete"
+{{- end }}

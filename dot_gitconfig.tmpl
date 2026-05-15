@@ -1,0 +1,12 @@
+[user]
+	name = {{ .git.userName }}
+	email = {{ .git.userEmail }}
+
+[core]
+	excludesfile = ~/.gitignore_global
+
+[pull]
+	rebase = true
+
+[init]
+	defaultBranch = main

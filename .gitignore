@@ -1,0 +1,13 @@
+# Local chezmoi and editor state
+.chezmoi*.bak
+.config/chezmoi/key.txt
+
+# OS and editor noise
+.DS_Store
+*.swp
+*.swo
+*~
+
+# Test/render scratch files
+tmp/
+*.log

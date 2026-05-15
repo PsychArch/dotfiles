@@ -1,0 +1,16 @@
+{{- $gitUserName := "Your Name" -}}
+{{- $gitUserEmail := "you@example.com" -}}
+{{- $installPackages := false -}}
+
+{{- if stdinIsATTY -}}
+{{- $gitUserName = promptStringOnce . "git.userName" "Git user name" $gitUserName -}}
+{{- $gitUserEmail = promptStringOnce . "git.userEmail" "Git user email" $gitUserEmail -}}
+{{- $installPackages = promptBoolOnce . "installPackages" "Install command-line tools during chezmoi apply" $installPackages -}}
+{{- end -}}
+
+[data]
+    installPackages = {{ $installPackages }}
+
+[data.git]
+    userName = {{ $gitUserName | quote }}
+    userEmail = {{ $gitUserEmail | quote }}

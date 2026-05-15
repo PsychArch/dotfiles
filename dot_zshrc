@@ -1,0 +1,271 @@
+# ========================================
+# ZSH CONFIGURATION
+# ========================================
+# Table of Contents:
+#   1. Early Initialization (non-interactive check, PATH)
+#   2. Plugin System (Antidote setup and loading)
+#   3. Core ZSH Options (history, completion, navigation)
+#   4. Visual Customization (prompt, theme)
+#   5. Key Bindings
+#   6. Tool Integrations (FZF)
+#   7. User Customization (aliases, functions, environment)
+# ========================================
+
+# ========================================
+# 1. EARLY INITIALIZATION
+# ========================================
+
+# --- Non-Interactive Shell Check ---
+# Skip most configuration for non-interactive shells (e.g., scp, rsync)
+[[ -o interactive ]] || return
+
+# --- PATH Configuration ---
+# Set PATH early so subsequent commands can find binaries
+export PATH="$HOME/.local/bin:$PATH"
+
+# Add pnpm to PATH if not already present
+export PNPM_HOME="$HOME/.local/share/pnpm"
+[[ ":$PATH:" != *":$PNPM_HOME:"* ]] && export PATH="$PNPM_HOME:$PATH"
+
+# --- FZF Configuration ---
+# FZF's shell integration reads these variables while it is sourced, so keep
+# them before plugin loading.
+export FZF_DEFAULT_COMMAND='fd --type f --strip-cwd-prefix --hidden --follow --exclude .git'
+export FZF_DEFAULT_OPTS='--height 40% --layout reverse --border top'
+export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
+export FZF_CTRL_T_OPTS="
+  --walker-skip .git,node_modules,target
+  --preview 'bat -n --color=always {} 2>/dev/null || cat {}'
+  --bind 'ctrl-/:change-preview-window(down|hidden|)'"
+export FZF_CTRL_R_OPTS="
+  --preview 'echo {}' --preview-window up:3:hidden:wrap
+  --bind 'ctrl-/:toggle-preview'
+  --bind 'ctrl-y:execute-silent(for c in pbcopy wl-copy xclip xsel; do command -v \$c >/dev/null 2>&1 || continue; case \$c in pbcopy) echo -n {2..} | pbcopy ;; wl-copy) echo -n {2..} | wl-copy ;; xclip) echo -n {2..} | xclip -selection clipboard ;; xsel) echo -n {2..} | xsel --clipboard --input ;; esac; break; done)+abort'
+  --color header:italic
+  --header 'Press CTRL-Y to copy command into clipboard'"
+export FZF_ALT_C_OPTS="
+  --walker-skip .git,node_modules,target
+  --preview 'tree -C {} | head -200'"
+
+# ========================================
+# 2. PLUGIN SYSTEM
+# ========================================
+
+# --- Antidote Plugin Manager ---
+# Check if Antidote is installed
+if [[ ! -e ${ZDOTDIR:-~}/.antidote ]]; then
+    echo "~/.antidote not cloned."
+    echo "Run: git clone https://github.com/mattmc3/antidote.git ${ZDOTDIR:-~}/.antidote"
+    return
+fi
+
+# Load antidote early so runtime helpers (e.g., use-omz) have access to its functions
+source ${ZDOTDIR:-~}/.antidote/antidote.zsh
+
+# --- Completion System ---
+# Load compinit with optimization: only check for new completions once per day
+if [[ -n "$ANTIDOTE_HOME" ]]; then
+  antidote_cache_dir="$ANTIDOTE_HOME"
+elif [[ "$OSTYPE" == darwin* ]]; then
+  antidote_cache_dir="$HOME/Library/Caches/antidote"
+else
+  antidote_cache_dir="${XDG_CACHE_HOME:-$HOME/.cache}/antidote"
+fi
+
+zsh_completions_dir="$antidote_cache_dir/github.com/zsh-users/zsh-completions/src"
+[[ -d "$zsh_completions_dir" ]] && fpath=("$zsh_completions_dir" $fpath)
+
+autoload -Uz compinit
+if [[ -n ${ZDOTDIR:-$HOME}/.zcompdump(#qN.mh+24) ]]; then
+  compinit
+else
+  compinit -C  # Skip check for faster startup
+fi
+
+# --- Plugin Loading ---
+# Static plugin loading for high performance
+# Plugins are defined in ~/.zsh_plugins.txt
+# To modify: edit ~/.zsh_plugins.txt, then regenerate with: rm ~/.zsh_plugins.zsh && source ~/.zshrc
+zsh_plugins=${ZDOTDIR:-$HOME}/.zsh_plugins
+if [[ ! ${zsh_plugins}.zsh -nt ${zsh_plugins}.txt ]]; then
+  (
+    source ${ZDOTDIR:-~}/.antidote/antidote.zsh
+    antidote bundle <${zsh_plugins}.txt >${zsh_plugins}.zsh
+  )
+fi
+source ${zsh_plugins}.zsh
+
+# --- FZF Shell Integration ---
+# `fzf --zsh` installs key bindings and completion widgets. Load it only when
+# the shell has a real terminal; non-TTY interactive shells cannot use ZLE.
+if [[ -t 0 && -t 1 ]] && command -v fzf > /dev/null 2>&1; then
+  eval "$(fzf --zsh)"
+fi
+
+# ========================================
+# 3. CORE ZSH OPTIONS
+# ========================================
+
+# --- History Configuration ---
+HISTFILE=~/.zsh_history
+HISTSIZE=100000   # Commands to keep in memory (increased from default 10000)
+SAVEHIST=100000   # Commands to save to file (increased from default 10000)
+
+# History behavior
+setopt EXTENDED_HISTORY          # Save timestamps with history entries
+setopt HIST_IGNORE_DUPS          # Don't record duplicate consecutive commands
+setopt HIST_IGNORE_ALL_DUPS      # Remove ALL duplicate entries (not just consecutive)
+setopt HIST_EXPIRE_DUPS_FIRST    # Expire duplicates first when trimming history
+setopt HIST_FIND_NO_DUPS         # Don't show duplicates in search
+setopt HIST_SAVE_NO_DUPS         # Don't write duplicates to history file
+setopt HIST_IGNORE_SPACE         # Ignore commands starting with space
+setopt HIST_REDUCE_BLANKS        # Remove superfluous blanks from commands
+setopt HIST_VERIFY               # Show command before executing from history expansion
+
+# Per-session history (don't share between terminals)
+unsetopt SHARE_HISTORY           # Don't share history between sessions
+unsetopt INC_APPEND_HISTORY      # Don't immediately add commands to history file
+
+# --- Completion Options ---
+setopt ALWAYS_TO_END             # Move cursor to end after completion
+setopt AUTO_MENU                 # Show completion menu on successive Tab press
+setopt COMPLETE_IN_WORD          # Complete from both ends of word
+
+# --- Directory Navigation ---
+setopt AUTO_CD                   # Type directory name to cd into it
+setopt AUTO_PUSHD                # Make cd push old directory onto directory stack
+setopt PUSHD_MINUS               # Swap meaning of cd +1 and cd -1
+setopt PUSHD_IGNORE_DUPS         # Don't push duplicate directories onto stack
+
+# --- Input/Output ---
+setopt INTERACTIVE_COMMENTS      # Allow comments in interactive shell
+unsetopt FLOW_CONTROL            # Disable Ctrl-S/Ctrl-Q flow control
+setopt NO_BEEP                   # Disable all beeps (audio bells)
+
+# --- Job Control ---
+setopt NO_HUP                    # Don't kill background jobs when shell exits
+
+# --- Prompt ---
+setopt PROMPT_SUBST              # Allow command substitution in prompt
+
+# --- Completion Styling ---
+# Allow completion commands to use sudo privileges when needed
+zstyle ':completion::complete:*' gain-privileges 1
+
+# Smart case matching with better partial word support
+# m:{a-zA-Z}={A-Za-z}     : lowercase matches both cases
+# r:|[._-]=* r:|=*        : partial word completion (match after delimiters)
+# l:|=* r:|=*             : substring completion (match anywhere in word)
+zstyle ':completion:*' matcher-list \
+  'm:{a-zA-Z}={A-Za-z}' \
+  'r:|[._-]=* r:|=*' \
+  'l:|=* r:|=*'
+
+# Use menu selection for completions
+zstyle ':completion:*' menu select
+
+# Colorize completions using LS_COLORS
+zstyle ':completion:*' list-colors "${(s.:.)LS_COLORS}"
+
+# Cache completions for better performance
+zstyle ':completion:*' use-cache yes
+zstyle ':completion:*' cache-path "${XDG_CACHE_HOME:-$HOME/.cache}/zsh/compcache"
+
+# Group completions by category with formatted descriptions
+zstyle ':completion:*' group-name ''
+zstyle ':completion:*:descriptions' format '%F{yellow}-- %d --%f'
+zstyle ':completion:*:warnings' format '%F{red}-- no matches found --%f'
+zstyle ':completion:*:corrections' format '%F{blue}-- %d (errors: %e) --%f'
+
+# ========================================
+# 4. VISUAL CUSTOMIZATION
+# ========================================
+
+# --- Theme Variables ---
+# DEPENDENCY: Requires git-prompt functions from ohmyzsh/ohmyzsh plugin
+
+# Git prompt styling
+ZSH_THEME_GIT_PROMPT_PREFIX="%{$fg[green]%}"
+ZSH_THEME_GIT_PROMPT_SUFFIX="%{$reset_color%}"
+ZSH_THEME_GIT_PROMPT_DIRTY=""
+ZSH_THEME_GIT_PROMPT_CLEAN=""
+
+# Git status symbols
+ZSH_THEME_GIT_PROMPT_ADDED="%{$fg[green]%} ✚"
+ZSH_THEME_GIT_PROMPT_MODIFIED="%{$fg[blue]%} ✹"
+ZSH_THEME_GIT_PROMPT_DELETED="%{$fg[red]%} ✖"
+ZSH_THEME_GIT_PROMPT_RENAMED="%{$fg[magenta]%} ➜"
+ZSH_THEME_GIT_PROMPT_UNMERGED="%{$fg[yellow]%} ═"
+ZSH_THEME_GIT_PROMPT_UNTRACKED="%{$fg[cyan]%} ✭"
+
+# --- Prompt Definition ---
+# Left prompt: user@host current_directory$
+local user='%{$fg[magenta]%}%n@%{$fg[magenta]%}%m%{$reset_color%}'
+local pwd='%{$fg[blue]%}%~%{$reset_color%}'
+PROMPT="${user} ${pwd}$ "
+
+# Right prompt: exit_code git_branch
+local return_code='%(?..%{$fg[red]%}%? ↵%{$reset_color%})'
+local git_branch='$(git_prompt_status)%{$reset_color%}$(git_prompt_info)%{$reset_color%}'
+RPROMPT="${return_code} ${git_branch}"
+
+# ========================================
+# 5. KEY BINDINGS
+# ========================================
+
+# --- History Search ---
+# DEPENDENCY: Requires history-substring-search plugin
+# Up/Down arrows search history based on what you've typed
+bindkey '^[[A' history-substring-search-up
+bindkey '^[[B' history-substring-search-down
+
+# ========================================
+# 6. TOOL INTEGRATIONS
+# ========================================
+
+# --- Zoxide Configuration ---
+# DEPENDENCY: Requires zoxide binary (installed via package manager)
+# Smart directory jumping based on frecency (frequency + recency)
+# Usage: 'z directory_name' to jump to frequently used directories
+if command -v zoxide &> /dev/null; then
+  eval "$(zoxide init zsh)"
+fi
+
+# ========================================
+# 7. USER CUSTOMIZATION
+# ========================================
+
+# --- Environment Variables ---
+if command -v nvim > /dev/null 2>&1; then
+  export EDITOR="$(command -v nvim)"
+else
+  export EDITOR="${EDITOR:-vi}"
+fi
+
+# --- Aliases ---
+# DEPENDENCY: Requires eza and nvim binaries
+if command -v eza > /dev/null 2>&1; then
+  alias ls="eza --icons=always"
+  alias tree="eza --tree --icons=always --level=3"
+fi
+
+if command -v nvim > /dev/null 2>&1; then
+  alias vi=nvim
+  alias vim=nvim
+fi
+
+# --- Helper Functions ---
+# Reload zsh configuration
+reload() {
+  source "${ZDOTDIR:-$HOME}/.zshrc"
+  echo "ZSH config reloaded!"
+}
+
+# --- Local Configuration ---
+# Source local machine-specific configuration (not tracked in version control)
+# Use this file for machine-specific aliases, functions, or environment variables
+[[ -f ~/.zshrc.local ]] && source ~/.zshrc.local
+
+# --- API Keys ---
+# Source API keys from separate file (not tracked in version control)
+[[ -f ~/.api_keys.zsh ]] && source ~/.api_keys.zsh

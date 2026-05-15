@@ -1,0 +1,12 @@
+# Files used only from the chezmoi source tree
+*.md
+docs/
+.git/
+.github/
+
+# Runtime support for chezmoi scripts, not files to place in $HOME
+scripts/
+shared/
+
+# Age encryption key should never be managed by this repo
+.config/chezmoi/key.txt
