@@ -12,8 +12,13 @@ fi
 source "${LOGGER_LIB}"
 
 cleanup_tmp() {
-  [ -n "${lazy_log:-}" ] && [ -f "${lazy_log}" ] && rm -f "${lazy_log}"
-  [ -n "${build_log:-}" ] && [ -f "${build_log}" ] && rm -f "${build_log}"
+  if [ -n "${lazy_log:-}" ] && [ -f "${lazy_log}" ]; then
+    rm -f "${lazy_log}"
+  fi
+  if [ -n "${build_log:-}" ] && [ -f "${build_log}" ]; then
+    rm -f "${build_log}"
+  fi
+  return 0
 }
 
 if ! command -v nvim >/dev/null 2>&1; then
@@ -46,7 +51,7 @@ if [ ! -d "${telescope_dir}" ]; then
   log_skip "Plugin not installed"
 elif ! command -v make >/dev/null 2>&1; then
   log_warn "make not found; install it to build native telescope extensions"
-  log_info "Example: sudo pacman -S make or sudo apt install make"
+  log_info "Example: sudo pacman -S make"
 else
   build_log=$(mktemp -t telescope-build-XXXXXX.log)
   if (cd "${telescope_dir}" && make >/dev/null 2>"${build_log}"); then

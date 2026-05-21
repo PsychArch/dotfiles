@@ -30,7 +30,6 @@ The package list focuses on tools used by these dotfiles:
 ## Install Paths
 
 - Arch uses `pacman` when sudo/root access is available.
-- Ubuntu/Debian uses `apt` when sudo/root access is available.
 - macOS uses Homebrew.
 
 If system package installation is unavailable, package bootstrap is skipped.

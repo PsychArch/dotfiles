@@ -3,7 +3,6 @@
 #
 # Hash triggers:
 # - Arch packages: {{ .packages.arch | toJson | sha256sum }}
-# - Ubuntu packages: {{ .packages.ubuntu | toJson | sha256sum }}
 # - Darwin packages: {{ .packages.darwin | toJson | sha256sum }}
 
 set -euo pipefail
@@ -32,34 +31,6 @@ ARCH_OPTIONAL=(
 export ARCH_OFFICIAL ARCH_OPTIONAL
 {{- end }}
 
-{{- if or (eq .chezmoi.osRelease.id "ubuntu") (eq .chezmoi.osRelease.id "debian") }}
-UBUNTU_APT=(
-{{- range .packages.ubuntu.apt }}
-    {{ . | quote }}
-{{- end }}
-)
-UBUNTU_CARGO=(
-{{- range .packages.ubuntu.cargo }}
-    {{ . | quote }}
-{{- end }}
-)
-UBUNTU_MANUAL_NAMES=(
-{{- range .packages.ubuntu.manual }}
-    {{ .name | quote }}
-{{- end }}
-)
-UBUNTU_MANUAL_METHODS=(
-{{- range .packages.ubuntu.manual }}
-    {{ .method | quote }}
-{{- end }}
-)
-UBUNTU_MANUAL_COMMANDS=(
-{{- range .packages.ubuntu.manual }}
-    {{ .command | quote }}
-{{- end }}
-)
-export UBUNTU_APT UBUNTU_CARGO UBUNTU_MANUAL_NAMES UBUNTU_MANUAL_METHODS UBUNTU_MANUAL_COMMANDS
-{{- end }}
 {{- end }}
 
 {{- if eq .chezmoi.os "darwin" }}
@@ -138,9 +109,6 @@ if [ -f /etc/os-release ]; then
         arch|manjaro)
             OS_TYPE="arch"
             ;;
-        ubuntu|debian|linuxmint|pop)
-            OS_TYPE="ubuntu"
-            ;;
         *)
             log_warn "Unknown Linux distribution: $OS_ID"
             ;;
@@ -174,21 +142,6 @@ if [ "$HAS_SUDO" = true ] && [ -n "$OS_TYPE" ]; then
 {{- end }}
 {{- else }}
             log_warn "Arch Linux installation skipped (running on macOS)"
-{{- end }}
-            ;;
-        ubuntu)
-{{- if ne .chezmoi.os "darwin" }}
-{{- if or (eq .chezmoi.osRelease.id "ubuntu") (eq .chezmoi.osRelease.id "debian") }}
-            # Source and run Ubuntu/Debian installation
-            source "${CHEZMOI_SOURCE_DIR}/scripts/lib/install-packages-ubuntu.sh"
-            if ! install_packages_ubuntu; then
-                log_warn "Ubuntu/Debian package installation did not complete"
-            fi
-{{- else }}
-            log_warn "Ubuntu/Debian installation skipped (not running on Ubuntu/Debian)"
-{{- end }}
-{{- else }}
-            log_warn "Ubuntu/Debian installation skipped (running on macOS)"
 {{- end }}
             ;;
         darwin)

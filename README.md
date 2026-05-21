@@ -43,7 +43,7 @@ The package installer is opt-in. With the default answer, chezmoi only applies d
 - Tmux with an `Alt-b` prefix, vi-style copy/navigation, safe clipboard behavior, Catppuccin Mocha colors, and `tmux-fzf`
 - Neovim as a simple editor with Lazy.nvim, Telescope, Neo-tree, Git signs, Diffview, and small editing helpers
 - Git defaults for identity, pull rebase, `main` as the default branch, and a global ignore file
-- Optional command-line tool bootstrap for Arch, Ubuntu/Debian, and macOS
+- Optional command-line tool bootstrap for Arch and macOS
 
 ## Daily Commands
 
