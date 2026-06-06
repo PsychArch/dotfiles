@@ -16,6 +16,17 @@ PLUGINS_TXT="${ZDOTDIR:-$HOME}/.zsh_plugins.txt"
 PLUGINS_CACHE="${ZDOTDIR:-$HOME}/.zsh_plugins.zsh"
 ZSHRC_PATH="${ZDOTDIR:-$HOME}/.zshrc"
 ZSHRC_ZWC="${ZSHRC_PATH}.zwc"
+ZSHRC_LOCAL="${HOME}/.zshrc.local"
+
+ensure_local_zshrc() {
+  if [ -f "${ZSHRC_LOCAL}" ]; then
+    log_skip "${ZSHRC_LOCAL} already exists"
+    return 0
+  fi
+
+  log_info "Creating ${ZSHRC_LOCAL}"
+  : > "${ZSHRC_LOCAL}"
+}
 
 ensure_antidote() {
   if [ -d "${ANTIDOTE_DIR}/.git" ]; then
@@ -55,6 +66,16 @@ if ensure_antidote; then
   log_done "Antidote ready"
 else
   log_fail "Unable to configure Antidote"
+  log_end_block
+  exit 1
+fi
+log_end_block
+
+log_block "Configure local zsh overrides"
+if ensure_local_zshrc; then
+  log_done "Local zsh overrides ready"
+else
+  log_fail "Unable to create ${ZSHRC_LOCAL}"
   log_end_block
   exit 1
 fi

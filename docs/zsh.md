@@ -10,7 +10,7 @@ The Zsh setup is optimized for interactive terminal work: fast static plugin loa
 
 ## Features
 
-- Adds `~/.local/bin` and the pnpm home directory to `PATH`
+- Adds `~/.local/bin` and `PNPM_HOME/bin` to `PATH`
 - Defines FZF options before loading FZF shell integration in terminal sessions
 - Loads completions with cached `compinit`
 - Uses per-session history with duplicate cleanup

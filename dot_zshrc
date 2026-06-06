@@ -23,9 +23,9 @@
 # Set PATH early so subsequent commands can find binaries
 export PATH="$HOME/.local/bin:$PATH"
 
-# Add pnpm to PATH if not already present
+# Add pnpm 11 global binaries to PATH.
 export PNPM_HOME="$HOME/.local/share/pnpm"
-[[ ":$PATH:" != *":$PNPM_HOME:"* ]] && export PATH="$PNPM_HOME:$PATH"
+[[ ":$PATH:" != *":$PNPM_HOME/bin:"* ]] && export PATH="$PNPM_HOME/bin:$PATH"
 
 # --- FZF Configuration ---
 # FZF's shell integration reads these variables while it is sourced, so keep
