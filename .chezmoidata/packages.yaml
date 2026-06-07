@@ -10,7 +10,7 @@ packages:
   # Arch Linux packages (via pacman)
   arch:
     official:
-      # Build essentials
+      # Build essentials and POSIX utilities
       - base-devel
       - git
       - wget

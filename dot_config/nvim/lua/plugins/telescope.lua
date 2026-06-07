@@ -3,7 +3,6 @@ return {
   tag = "v0.2.1",
   dependencies = {
     "nvim-lua/plenary.nvim",
-    { "nvim-telescope/telescope-fzf-native.nvim", build = "make" },
     "nvim-tree/nvim-web-devicons",
   },
   config = function()
@@ -22,8 +21,6 @@ return {
         },
       },
     })
-
-    telescope.load_extension("fzf")
 
     -- Set keymaps
     local keymap = vim.keymap
