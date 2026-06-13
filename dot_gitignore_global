@@ -11,17 +11,17 @@ Thumbs.db
 
 # Editor directories and files
 .idea/
-.vscode/
 *.swp
 *.swo
 *~
 .*.sw?
 *.sublime-workspace
 
-# Logs and databases
+# Logs and local databases
 *.log
-*.sql
 *.sqlite
+*.sqlite3
+*.db
 
 # Compiled source
 *.com
@@ -36,7 +36,6 @@ Thumbs.db
 *.dmg
 *.gz
 *.iso
-*.jar
 *.rar
 *.tar
 *.zip
@@ -52,19 +51,11 @@ yarn-error.log*
 __pycache__/
 *.py[cod]
 *$py.class
-*.so
 .Python
-env/
-build/
 develop-eggs/
-dist/
-downloads/
 eggs/
 .eggs/
-lib64/
 parts/
-sdist/
-var/
 wheels/
 *.egg-info/
 .installed.cfg
@@ -74,7 +65,3 @@ venv/lib/
 .venv/lib/
 env/lib/
 .env/lib/
-
-# Temporary files
-tmp/
-temp/
