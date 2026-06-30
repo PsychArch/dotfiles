@@ -1,7 +1,7 @@
 local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
 if not (vim.uv or vim.loop).fs_stat(lazypath) then
   local lazyrepo = "https://github.com/folke/lazy.nvim.git"
-  local out = vim.fn.system({ "git", "clone", "--filter=blob:none", "--branch=stable", lazyrepo, lazypath })
+  local out = vim.fn.system({ "git", "clone", "--filter=blob:none", lazyrepo, lazypath })
   if vim.v.shell_error ~= 0 then
     vim.api.nvim_echo({
       { "Failed to clone lazy.nvim:\n", "ErrorMsg" },
@@ -22,10 +22,8 @@ require("lazy").setup({
   defaults = {
     -- Keep plugin loading explicit in each local spec.
     lazy = false,
-    -- Leave version=false by default because many plugin release tags lag behind main.
-    -- have outdated releases, which may break your Neovim install.
+    -- Float plugins on their upstream default branch instead of pinning releases.
     version = false, -- always use the latest git commit
-    -- version = "*", -- try installing the latest stable version for plugins that support semver
   },
   install = { colorscheme = { "tokyonight", "habamax" } },
   checker = {
