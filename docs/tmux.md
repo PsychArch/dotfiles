@@ -21,7 +21,7 @@ The tmux config keeps the plugin surface small while making pane work, copy mode
 
 ## Behavior
 
-- Window and pane indexes start at 1
+- Window and pane indexes use tmux defaults and start at 0
 - Mouse mode is enabled
 - Copy mode uses vi keys
 - OSC 52 clipboard support is enabled in `external` mode
