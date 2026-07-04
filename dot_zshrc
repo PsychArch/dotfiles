@@ -171,11 +171,12 @@ zstyle ':completion:*' list-colors "${(s.:.)LS_COLORS}"
 zstyle ':completion:*' use-cache yes
 zstyle ':completion:*' cache-path "${XDG_CACHE_HOME:-$HOME/.cache}/zsh/compcache"
 
-# Group completions by category with formatted descriptions
+# Group completions by category. fzf-tab displays these labels literally, so
+# keep them free of prompt escapes such as %F/%f.
 zstyle ':completion:*' group-name ''
-zstyle ':completion:*:descriptions' format '%F{yellow}-- %d --%f'
-zstyle ':completion:*:warnings' format '%F{red}-- no matches found --%f'
-zstyle ':completion:*:corrections' format '%F{blue}-- %d (errors: %e) --%f'
+zstyle ':completion:*:descriptions' format '[%d]'
+zstyle ':completion:*:warnings' format '[no matches found]'
+zstyle ':completion:*:corrections' format '[%d (errors: %e)]'
 
 # ========================================
 # 4. VISUAL CUSTOMIZATION
